@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TMC Maksan - Takip</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #333; margin: 0; padding: 10px; color: white; display: flex; flex-direction: column; align-items: center; }
+        .nav-bar { width: 100%; max-width: 800px; display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+        .btn { padding: 12px; border: none; border-radius: 4px; color: white; cursor: pointer; font-weight: bold; flex: 1; min-width: 90px; font-size: 11px; }
+        .btn-save { background: #27ae60; } .btn-jpg { background: #d35400; } .btn-backup { background: #8e44ad; }
+        #form-container { width: 100%; max-width: 800px; background: white; padding: 15px; color: #000; border-radius: 8px; box-sizing: border-box; }
+        .history-item { background: #eee; color: #333; margin-bottom: 5px; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-radius: 4px; }
+        #preview-area { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:100; flex-direction:column; align-items:center; justify-content:center; }
+        #preview-area img { max-width:95%; max-height:80%; }
+    </style>
+</head>
+<body>
+
+<div id="preview-area">
+    <p style="color:white">Resme basılı tutup "Resmi Kaydet" deyin.</p>
+    <img id="preview-img" src="">
+    <button onclick="document.getElementById('preview-area').style.display='none'" style="margin-top:10px; padding:10px;">KAPAT</button>
+</div>
+
+<div class="nav-bar">
+    <button class="btn btn-save" onclick="saveData()">KAYDET</button>
+    <button class="btn btn-jpg" onclick="exportJPG()">JPG YAP</button>
+    <button class="btn btn-backup" onclick="backupData()">Yedek/Yükle</button>
+</div>
+
+<div id="form-container">
+    <h2 style="color:#c0392b">TMC MAKSAN</h2>
+    <div contenteditable="true" id="f-tarih" style="border-bottom:1px solid #000">26/01/2026</div>
+    <p>Ürün Adı: <span contenteditable="true" id="f-uadi" style="border-bottom:1px solid #ccc"></span></p>
+    </div>
+
+<div id="history-container" style="width:100%; max-width:800px; margin-top:15px;">
+    <h4>Kayıtlı İşler (Düzenlemek için isme tıkla)</h4>
+    <div id="history-list"></div>
+</div>
+
+<script>
+    function saveData() {
+        const data = {
+            id: Date.now(),
+            uadi: document.getElementById('f-uadi').innerText || "İsimsiz İş",
+            content: document.getElementById('form-container').innerHTML
+        };
+        let history = JSON.parse(localStorage.getItem('tmc_records') || '[]');
+        history.push(data);
+        localStorage.setItem('tmc_records', JSON.stringify(history));
+        renderHistory();
+        alert("Kaydedildi!");
+    }
+
+    function renderHistory() {
+        const list = document.getElementById('history-list');
+        const history = JSON.parse(localStorage.getItem('tmc_records') || '[]');
+        list.innerHTML = '';
+        history.forEach(item => {
+            list.innerHTML += `<div class="history-item">
+                <div style="flex:1" onclick="loadData(${item.id})">${item.uadi}</div>
+                <button onclick="loadData(${item.id})" style="background:#2980b9; color:white; border:none; padding:5px 10px; margin-right:5px;">+</button>
+                <button onclick="deleteData(${item.id})" style="background:#c0392b; color:white; border:none; padding:5px 10px;">X</button>
+            </div>`;
+        });
+    }
+
+    function loadData(id) {
+        const history = JSON.parse(localStorage.getItem('tmc_records') || '[]');
+        const item = history.find(i => i.id === id);
+        if(item) { document.getElementById('form-container').innerHTML = item.content; window.scrollTo(0,0); }
+    }
+
+    function deleteData(id) {
+        if(confirm("Silinsin mi?")) {
+            let history = JSON.parse(localStorage.getItem('tmc_records') || '[]');
+            localStorage.setItem('tmc_records', JSON.stringify(history.filter(i => i.id !== id)));
+            renderHistory();
+        }
+    }
+
+    function exportJPG() {
+        html2canvas(document.querySelector("#form-container")).then(canvas => {
+            document.getElementById('preview-img').src = canvas.toDataURL("image/jpeg");
+            document.getElementById('preview-area').style.display = 'flex';
+        });
+    }
+
+    function backupData() {
+        const code = localStorage.getItem('tmc_records');
+        const input = prompt("Yedek Kodunuz (Kopyalayın veya Yeni Kod Yapıştırın):", code);
+        if(input && input !== code) { localStorage.setItem('tmc_records', input); renderHistory(); }
+    }
+
+    renderHistory();
+</script>
+</body>
+</html>
