@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TMC Maksan - Takip</title>
+    <title>TMC Maksan - Üretim Takip</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body { font-family: sans-serif; background: #333; margin: 0; padding: 10px; color: white; display: flex; flex-direction: column; align-items: center; }
@@ -11,15 +11,23 @@
         .btn { padding: 12px; border: none; border-radius: 4px; color: white; cursor: pointer; font-weight: bold; flex: 1; min-width: 90px; font-size: 11px; }
         .btn-save { background: #27ae60; } .btn-jpg { background: #d35400; } .btn-backup { background: #8e44ad; }
         #form-container { width: 100%; max-width: 800px; background: white; padding: 15px; color: #000; border-radius: 8px; box-sizing: border-box; }
-        .history-item { background: #eee; color: #333; margin-bottom: 5px; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-radius: 4px; }
+        .section-bar { background: #bcbcbc; padding: 8px; font-weight: bold; margin: 10px 0; font-size: 14px; text-align:center; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .row { display: flex; align-items: center; margin-bottom: 4px; }
+        .label { background: #e0e0e0; padding: 5px; min-width: 100px; font-size: 11px; margin-right: 4px; }
+        .box { border: 1px solid #ccc; flex: 1; height: 22px; padding: 0 5px; font-size: 12px; outline: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 4px; font-size: 11px; text-align: center; }
         #preview-area { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:100; flex-direction:column; align-items:center; justify-content:center; }
-        #preview-area img { max-width:95%; max-height:80%; }
+        #preview-area img { max-width:95%; max-height:80%; border:2px solid white; }
+        .history-item { background: #eee; color: #333; margin-bottom: 5px; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-radius: 4px; }
+        @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 
 <div id="preview-area">
-    <p style="color:white">Resme basılı tutup "Resmi Kaydet" deyin.</p>
+    <p style="color:white; font-size:12px;">Resme basılı tutup "Resmi Kaydet" deyin.</p>
     <img id="preview-img" src="">
     <button onclick="document.getElementById('preview-area').style.display='none'" style="margin-top:10px; padding:10px;">KAPAT</button>
 </div>
@@ -27,24 +35,53 @@
 <div class="nav-bar">
     <button class="btn btn-save" onclick="saveData()">KAYDET</button>
     <button class="btn btn-jpg" onclick="exportJPG()">JPG YAP</button>
-    <button class="btn btn-backup" onclick="backupData()">Yedek/Yükle</button>
+    <button class="btn btn-backup" onclick="backupData()">Yedekle/Yükle</button>
 </div>
 
 <div id="form-container">
-    <h2 style="color:#c0392b">TMC MAKSAN</h2>
-    <div contenteditable="true" id="f-tarih" style="border-bottom:1px solid #000">26/01/2026</div>
-    <p>Ürün Adı: <span contenteditable="true" id="f-uadi" style="border-bottom:1px solid #ccc"></span></p>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2 style="margin:0; color:#c0392b; font-size:18px;">TMC MAKSAN</h2>
+        <div id="f-tarih" contenteditable="true" style="border-bottom:1px solid #000;">26/01/2026</div>
     </div>
 
-<div id="history-container" style="width:100%; max-width:800px; margin-top:15px;">
-    <h4>Kayıtlı İşler (Düzenlemek için isme tıkla)</h4>
+    <div class="section-bar">SERİ ÜRETİM İŞ EMRİ</div>
+    <div class="grid">
+        <div class="row"><div class="label">Üretim No</div><div class="box" id="f-uno" contenteditable="true"></div></div>
+        <div class="row"><div class="label">Ürün Adı</div><div class="box" id="f-uadi" contenteditable="true"></div></div>
+        <div class="row"><div class="label">Miktar</div><div class="box" id="f-miktar" contenteditable="true"></div></div>
+        <div class="row"><div class="label">Birim</div><div class="box" id="f-birim" contenteditable="true"></div></div>
+    </div>
+
+    <table>
+        <thead>
+            <tr><th>Parça No</th><th>Malzeme Kodu</th><th>Malzeme Adı</th><th>Miktar</th><th>Birim</th></tr>
+        </thead>
+        <tbody id="table-rows"></tbody>
+    </table>
+</div>
+
+<div style="width:100%; max-width:800px; margin-top:15px;">
+    <h4>Kayıtlı İşler</h4>
     <div id="history-list"></div>
 </div>
 
 <script>
+    // 15 satırlık tabloyu oluştur
+    const tbody = document.getElementById('table-rows');
+    for(let i=0; i<15; i++) {
+        tbody.innerHTML += `<tr>
+            <td contenteditable="true"></td>
+            <td contenteditable="true"></td>
+            <td contenteditable="true"></td>
+            <td contenteditable="true"></td>
+            <td contenteditable="true"></td>
+        </tr>`;
+    }
+
     function saveData() {
         const data = {
             id: Date.now(),
+            tarih: document.getElementById('f-tarih').innerText,
             uadi: document.getElementById('f-uadi').innerText || "İsimsiz İş",
             content: document.getElementById('form-container').innerHTML
         };
@@ -61,8 +98,7 @@
         list.innerHTML = '';
         history.forEach(item => {
             list.innerHTML += `<div class="history-item">
-                <div style="flex:1" onclick="loadData(${item.id})">${item.uadi}</div>
-                <button onclick="loadData(${item.id})" style="background:#2980b9; color:white; border:none; padding:5px 10px; margin-right:5px;">+</button>
+                <div style="flex:1" onclick="loadData(${item.id})"><b>${item.uadi}</b> - ${item.tarih}</div>
                 <button onclick="deleteData(${item.id})" style="background:#c0392b; color:white; border:none; padding:5px 10px;">X</button>
             </div>`;
         });
@@ -71,7 +107,7 @@
     function loadData(id) {
         const history = JSON.parse(localStorage.getItem('tmc_records') || '[]');
         const item = history.find(i => i.id === id);
-        if(item) { document.getElementById('form-container').innerHTML = item.content; window.scrollTo(0,0); }
+        if(item) { document.getElementById('form-container').innerHTML = item.content; }
     }
 
     function deleteData(id) {
@@ -91,7 +127,7 @@
 
     function backupData() {
         const code = localStorage.getItem('tmc_records');
-        const input = prompt("Yedek Kodunuz (Kopyalayın veya Yeni Kod Yapıştırın):", code);
+        const input = prompt("Yedek Kodunuz:", code);
         if(input && input !== code) { localStorage.setItem('tmc_records', input); renderHistory(); }
     }
 
